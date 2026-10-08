@@ -35,7 +35,7 @@
     .badge-fahrt { background: rgba(56,189,248,0.2); color: var(--blue); border: 1px solid var(--blue); }
     .badge-pause { background: rgba(245,158,11,0.2); color: var(--yellow); border: 1px solid var(--yellow); }
 
-    /* Kunden-Feld */
+    /* Kunden- & Auftragsdaten */
     .input-group { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 14px; }
     .input-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; }
     .input-field { width: 100%; background: #141820; border: 1px solid var(--border); border-radius: 8px; padding: 10px; color: #fff; font-size: 14px; outline: none; }
@@ -92,10 +92,13 @@
       <div class="badge badge-out" id="currentStatusBadge">Wird geladen...</div>
     </div>
 
-    <!-- Kunde / Einsatzort -->
+    <!-- Kunde & Reparaturschein-Nummer -->
     <div class="input-group">
       <div class="input-label">Kunde / Einsatzort</div>
-      <input type="text" id="kundeInput" class="input-field" placeholder="z. B. Textil Meyer, Stuttgart" />
+      <input type="text" id="kundeInput" class="input-field" placeholder="z. B. Textil Meyer, Stuttgart" style="margin-bottom: 10px;" />
+      
+      <div class="input-label">Auftrags-Nr. / Servicebericht</div>
+      <input type="text" id="repNrInput" class="input-field" placeholder="z. B. AT-2026-148 oder Schein-Nr." />
     </div>
 
     <!-- 1. WEGZEIT -->
@@ -224,10 +227,20 @@
         if (c.length >= 3) {
           const stamp = c[0].trim();
           const stat  = c[2].trim();
-          const kunde = c.length > 3 ? c[3].trim() : "";
+          let kunde   = "";
+          let repNr   = "";
+
+          if (c.length >= 7) {
+            // Neues Format mit Rep.-Nummer
+            kunde = c[3].trim();
+            repNr = c[4].trim();
+          } else if (c.length >= 4) {
+            // Bisheriges Format ohne Rep.-Nummer
+            kunde = c[3].trim();
+          }
 
           if (stamp.startsWith(today)) {
-            heutige.push({ stamp, stat, kunde });
+            heutige.push({ stamp, stat, kunde, repNr });
             letzterStatus = stat;
           }
         }
@@ -256,12 +269,19 @@
 
       heutige.reverse().slice(0, 8).forEach(e => {
         const uhr = e.stamp.substring(11, 16);
+        let infoText = "";
+        if (e.kunde && e.kunde !== "-") infoText += e.kunde;
+        if (e.repNr && e.repNr !== "-") {
+          if (infoText.length > 0) infoText += " · ";
+          infoText += "Rep: " + e.repNr;
+        }
+
         const row = document.createElement("div");
         row.className = "history-row";
         row.innerHTML = `
           <div class="h-info">
             <span>${uhr} Uhr</span>
-            ${e.kunde ? `<span class="h-kunde">${e.kunde}</span>` : ""}
+            ${infoText ? `<span class="h-kunde">${infoText}</span>` : ""}
           </div>
           <span class="h-status st-${e.stat}">${e.stat.replace('_', ' ')}</span>
         `;
@@ -273,6 +293,8 @@
       if (!GH_TOKEN) { konfiguriereZugang(); return; }
       
       const kunde = document.getElementById("kundeInput").value.trim();
+      const repNr = document.getElementById("repNrInput").value.trim();
+
       let wegzeitInfo = "-";
       let arbeitInfo = "-";
 
@@ -287,7 +309,7 @@
 
       try {
         let sha = "";
-        let inhalt = "Zeitstempel;Mitarbeiter;Status;Kunde;Wegzeit;Arbeitszeit_Kunde\n";
+        let inhalt = "Zeitstempel;Mitarbeiter;Status;Kunde;Rep_Nummer;Wegzeit;Arbeitszeit_Kunde\n";
 
         const resGet = await fetch(url, {
           headers: { "Authorization": `Bearer ${GH_TOKEN}`, "Accept": "application/vnd.github.v3+json" }
@@ -297,13 +319,26 @@
           sha = d.sha;
           inhalt = decodeURIComponent(escape(atob(d.content)));
           if (!inhalt.endsWith("\n")) inhalt += "\n";
+
+          // Falls ein alter Tabellenkopf existiert, diesen automatisch aktualisieren
+          if (inhalt.startsWith("Zeitstempel;Mitarbeiter;Status;Kunde;Wegzeit;Arbeitszeit_Kunde")) {
+            inhalt = inhalt.replace(
+              "Zeitstempel;Mitarbeiter;Status;Kunde;Wegzeit;Arbeitszeit_Kunde",
+              "Zeitstempel;Mitarbeiter;Status;Kunde;Rep_Nummer;Wegzeit;Arbeitszeit_Kunde"
+            );
+          } else if (inhalt.startsWith("Zeitstempel;Mitarbeiter;Status\n")) {
+            inhalt = inhalt.replace(
+              "Zeitstempel;Mitarbeiter;Status\n",
+              "Zeitstempel;Mitarbeiter;Status;Kunde;Rep_Nummer;Wegzeit;Arbeitszeit_Kunde\n"
+            );
+          }
         }
 
         const now = new Date();
         const stamp = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
         
-        // 6 Spalten einfügen
-        const neueZeile = `${stamp};${MITARBEITER};${status};${kunde || '-'};${wegzeitInfo};${arbeitInfo}\n`;
+        // 7 Spalten einfügen
+        const neueZeile = `${stamp};${MITARBEITER};${status};${kunde || '-'};${repNr || '-'};${wegzeitInfo};${arbeitInfo}\n`;
         const neuerInhalt = inhalt + neueZeile;
         const b64 = btoa(unescape(encodeURIComponent(neuerInhalt)));
 
