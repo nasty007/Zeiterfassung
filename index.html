@@ -45,7 +45,7 @@
             z-index: 100;
         }
 
-        .logo-area { display: flex; align-items: center; gap: 10px; }
+        .logo-area { display: flex; align-items: center; gap: 8px; }
         .logo-img { width: 26px; height: 26px; border-radius: 4px; object-fit: contain; }
         
         .logo-text-wrapper { display: flex; align-items: baseline; gap: 6px; }
@@ -172,8 +172,10 @@
 
     <div class="header">
         <div class="logo-area">
-            <!-- Kompaktes Base64 Nähtec-Logo -->
-            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAACXBIWXMAAAsTAAALEwEAmpwYAAADNUlEQVR4nO2az2sTQRTHP7O7szH90bTF/EEphR5E8CQI4sH+Bz0revRcvHnwot562YMHg6BCQTwpeCjooeCiF1EIeBBBKRSpoD9a0zbJzrgzj51NSBqS3ZnZ2XwPPm2yu5Nvv2/fmzdvZhTEGBM9WqT5cM0/E+rL5sO1r2NMAq77Sg2WzGgI/gCgIfgDgIbgDwAaQusD7zI1nrytcXX8C8vFGlm/0k9e1g/pB1mY0z9rS76nIXQ28C5TIzn2nbm5bXqB07X99O9l9f94kIZk62cM6gQZf+rEANLh4gXw9sI6k7PrnB+5A8DI7fI9fB+E1s+D1PoxmU304q6/bW9+fA0/xZpG9u6/69sY6Z9P+QOAhpB2gC704jE9/d48iC5XhRjX2m48pC2b01Hl24bQZ4A2x6E2x6k2R9L1cE0E7wF22Q7e7t6205809x5fQ/d2P9o1Zg2B2mXb60w1+pU1BGqXba8z1eg3fR0TzV8x1eg3Vz0NofUD7A4D7A4D7A4D7A4D7A4D7A4D2hxntv2yLceh37n1qXbZ9jpTjX5lDYHaZdvrTDX6TV/HRNO4uOqpNsepNkfS9XANQWsI/gCgIfgDgIbgDwAagj8AaAj+AKAh+AOAhuAPABqCPwBoCP4AoCH4A4CG4A8AGoI/AGgI/gCgIfgDgIbgDwAagj8AaAhxBLwBZoAZwAHmDPMsY8wJYLtlmRcsy1wF5gEv8n0tIAbAhv2/BPQDp5s+u1f5uTf23X22x0wD72P8LSkRAnqBM8Ad4H7y3hngmTEmBtwEHgIvgKPAI2PMuGXZV40x65ZlV2P+PQkRAgaAYeAKcAMYDtycAD4ANwEHLw5cAfK2/88Cbw1wKzE8x+QfUAD+AGU7B1wM/b8KjAAfgQW7Tz4gIELAlGXZK3Z++GjnhyHgGjAMnAbKdsxXgNe2fS3gYw1wLHEE1OwMvwhcsKznJ4wxg8Bpe/6pMaZqWdYnwAEuAR8N8DJ2zG81qf13jU7Bq2n+D4D9wBvLsuYx/wngAnAN2A9UAed/x6c1BH8A0BD8AUBD8AcADcEfADQEfwDQEPwBQEPwBwANoT0C/gF8qjYmZ61ZqwAAAABJRU5ErkJggg==" alt="Nähtec Logo" class="logo-img">
+            <!-- Das Logo wird nur angezeigt, wenn die Datei logo.png auf GitHub existiert. 
+                 Fehlt sie, verschwindet der Platzhalter und der Text rutscht ganz nach links! -->
+            <img src="logo.png" alt="Nähtec Logo" class="logo-img" onerror="this.style.display='none'">
+            
             <div class="logo-text-wrapper">
                 <div class="logo-nahtec">NÄHTEC</div>
                 <div class="logo-subtitle">Service Mobile</div>
