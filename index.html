@@ -1,369 +1,476 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nähtec Service Mobile</title>
-  <style>
-    :root {
-      --bg: #10141a;
-      --card: #21262e;
-      --border: #383f4c;
-      --text: #f0f6fc;
-      --muted: #8b949e;
-      --red: #d14444;
-      --green: #22c55e;
-      --yellow: #f59e0b;
-      --blue: #38bdf8;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: var(--bg); color: var(--text); padding: 14px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
-    .container { width: 100%; max-width: 480px; }
-    
-    .header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; border-bottom: 2px solid var(--red); margin-bottom: 14px; }
-    .brand { font-size: 19px; font-weight: bold; color: var(--red); letter-spacing: 1px; }
-    .brand span { font-size: 13px; color: var(--muted); font-weight: normal; margin-left: 4px; }
-    .clock { font-size: 16px; font-weight: 600; text-align: right; }
-    .date { font-size: 12px; color: var(--muted); text-align: right; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NÄHTEC Zeiterfassung</title>
+    <!-- Dark Theme Anpassung für mobile Browser -->
+    <meta name="theme-color" content="#10121A">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #10121A;
+            --header: #181E24;
+            --nahtec-rot: #D11414;
+            --card-bg: #21262E;
+            --card-border: #383F4C;
+            --text-light: #FFFFFF;
+            --text-muted: #9CBDD3;
+            
+            --col-kommen: #14C656;
+            --col-pause:  #FA9600;
+            --col-gehen:  #A73739; /* Neues gedämpftes Rot aus dem ESP32-Terminal */
+        }
 
-    .status-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; text-align: center; margin-bottom: 14px; }
-    .user-name { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
-    .user-role { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
-    .badge { display: inline-block; padding: 5px 14px; border-radius: 20px; font-size: 13px; font-weight: bold; }
-    .badge-out   { background: #333; color: var(--muted); }
-    .badge-in    { background: rgba(34,197,94,0.2); color: var(--green); border: 1px solid var(--green); }
-    .badge-fahrt { background: rgba(56,189,248,0.2); color: var(--blue); border: 1px solid var(--blue); }
-    .badge-pause { background: rgba(245,158,11,0.2); color: var(--yellow); border: 1px solid var(--yellow); }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
 
-    /* Kunden- & Auftragsdaten */
-    .input-group { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 14px; }
-    .input-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; }
-    .input-field { width: 100%; background: #141820; border: 1px solid var(--border); border-radius: 8px; padding: 10px; color: #fff; font-size: 14px; outline: none; }
-    .input-field:focus { border-color: var(--blue); }
+        body {
+            background-color: var(--bg);
+            color: var(--text-light);
+            -webkit-font-smoothing: antialiased;
+        }
 
-    /* Tasten-Sektionen */
-    .section-title { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
-    .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
-    .btn-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 14px; }
-    
-    .btn { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 6px; color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; text-align: center; transition: all 0.15s ease; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-    .btn:active { transform: scale(0.96); }
-    .btn-icon { font-size: 18px; }
+        /* --- Header --- */
+        .header {
+            background: var(--header);
+            border-bottom: 2px solid var(--nahtec-rot);
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
 
-    .btn-blue:hover,  .btn-blue:active  { border-color: var(--blue); background: rgba(56,189,248,0.15); }
-    .btn-green:hover, .btn-green:active { border-color: var(--green); background: rgba(34,197,94,0.15); }
-    .btn-yellow:hover,.btn-yellow:active{ border-color: var(--yellow); background: rgba(245,158,11,0.15); }
-    .btn-red:hover,   .btn-red:active   { border-color: var(--red); background: rgba(209,68,68,0.15); }
+        .logo-area { display: flex; align-items: baseline; gap: 8px; }
+        .logo-nahtec { color: var(--nahtec-rot); font-size: 20px; font-weight: 700; letter-spacing: 0.5px; }
+        .logo-gmbh { color: var(--text-muted); font-size: 14px; }
 
-    .toast { text-align: center; font-size: 13px; color: var(--muted); margin-bottom: 12px; min-height: 18px; }
+        .header-actions { display: flex; align-items: center; gap: 15px; }
+        .sync-btn {
+            background: transparent; border: none; color: var(--text-light);
+            font-size: 22px; cursor: pointer; transition: transform 0.3s;
+        }
+        .sync-btn:active { transform: rotate(180deg); }
+        .settings-btn { font-size: 20px; cursor: pointer; color: var(--text-muted); }
 
-    /* Historie */
-    .history-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 16px; }
-    .history-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 12px; }
-    .history-row:last-child { border-bottom: none; }
-    .h-info { display: flex; flex-direction: column; gap: 2px; }
-    .h-kunde { font-size: 11px; color: var(--muted); }
-    .h-status { font-weight: 600; padding: 3px 8px; border-radius: 6px; font-size: 11px; }
+        /* --- Container --- */
+        .container { padding: 20px; padding-bottom: 80px; }
 
-    .st-KOMMEN      { background: var(--green); color: #fff; }
-    .st-GEHEN       { background: var(--red); color: #fff; }
-    .st-PAUSE       { background: var(--yellow); color: #000; }
-    .st-FAHRT_START { background: var(--blue); color: #000; }
-    .st-FAHRT_ENDE  { background: #1e3a5f; color: var(--blue); border: 1px solid var(--blue); }
-    .st-ARBEIT_START{ background: var(--green); color: #fff; }
-    .st-ARBEIT_ENDE { background: #1f4a2c; color: var(--green); border: 1px solid var(--green); }
+        /* --- Status Badge --- */
+        .status-badge-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .user-name { font-weight: 600; font-size: 16px; color: var(--text-muted); }
+        .status-badge {
+            background: var(--card-border); color: var(--text-light);
+            padding: 6px 14px; border-radius: 20px; font-weight: 600; font-size: 14px;
+        }
+        .status-kommen { background: var(--col-kommen); color: #fff; }
+        .status-pause { background: var(--col-pause); color: #000; }
+        .status-gehen { background: var(--col-gehen); color: #fff; }
 
-    .settings-btn { background: none; border: none; color: var(--muted); font-size: 12px; text-decoration: underline; cursor: pointer; display: block; margin: 0 auto; }
-  </style>
+        /* --- Eingabe-Formular für manuelle Web-Buchungen --- */
+        .booking-card {
+            background: var(--card-bg); border: 1px solid var(--card-border);
+            border-radius: 12px; padding: 20px; margin-bottom: 24px;
+        }
+        
+        .input-group { margin-bottom: 16px; }
+        .input-group label { display: block; margin-bottom: 8px; font-size: 14px; color: var(--text-muted); }
+        .input-group input {
+            width: 100%; padding: 12px; border-radius: 8px;
+            border: 1px solid var(--card-border); background: var(--bg);
+            color: var(--text-light); font-size: 16px;
+        }
+
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
+        .btn-action {
+            padding: 14px; border: none; border-radius: 10px; font-weight: 700; font-size: 16px;
+            color: #fff; cursor: pointer; transition: opacity 0.2s;
+        }
+        .btn-action:active { opacity: 0.7; }
+        .btn-kommen { background: var(--col-kommen); }
+        .btn-pause { background: var(--col-pause); color: #000; }
+        .btn-gehen { background: var(--col-gehen); grid-column: span 2; }
+
+        /* --- Dashboard Kacheln --- */
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+        .kachel {
+            background: var(--card-bg); border: 1px solid var(--card-border);
+            border-radius: 12px; padding: 16px; text-align: center;
+        }
+        .kachel-title { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+        .kachel-value { font-size: 20px; font-weight: 700; }
+        
+        .val-kommen { color: var(--col-kommen); }
+        .val-pause { color: var(--col-pause); }
+        .val-gehen { color: var(--text-light); }
+        .val-ueberstunden { color: var(--col-kommen); }
+        .val-ueberstunden.minus { color: var(--col-pause); }
+
+        .kachel-ueberstunden { grid-column: span 2; }
+
+        /* --- Historie --- */
+        .historie-title { font-size: 16px; font-weight: 600; margin-bottom: 12px; color: var(--text-light); }
+        .historie-liste { display: flex; flex-direction: column; gap: 10px; }
+        .hist-item {
+            background: var(--card-bg); border: 1px solid var(--card-border);
+            border-radius: 10px; padding: 12px 16px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .hist-info { display: flex; flex-direction: column; gap: 4px; }
+        .hist-time { font-weight: 600; font-size: 15px; }
+        .hist-meta { font-size: 12px; color: var(--text-muted); }
+        .hist-badge {
+            padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700;
+            color: #fff; text-transform: uppercase;
+        }
+        .bg-kommen { background: var(--col-kommen); }
+        .bg-pause { background: var(--col-pause); color: #000; }
+        .bg-gehen { background: var(--col-gehen); }
+
+        #syncInfo { text-align: center; margin-top: 20px; font-size: 12px; color: var(--text-muted); }
+    </style>
 </head>
 <body>
-  <div class="container">
+
     <div class="header">
-      <div class="brand">NÄHTEC <span>Service Mobile</span></div>
-      <div>
-        <div class="clock" id="liveClock">--:--:--</div>
-        <div class="date" id="liveDate">--.--.----</div>
-      </div>
+        <div class="logo-area">
+            <div class="logo-nahtec">NÄHTEC</div>
+            <div class="logo-gmbh">GmbH</div>
+        </div>
+        <div class="header-actions">
+            <span class="settings-btn" onclick="konfiguriereZugang()">⚙️</span>
+            <button class="sync-btn" onclick="ladeDatenVonGitHub()">🔄</button>
+        </div>
     </div>
 
-    <div class="status-card">
-      <div class="user-name" id="userNameLabel">Josip Lazic (148)</div>
-      <div class="user-role">Elektrotechniker</div>
-      <div class="badge badge-out" id="currentStatusBadge">Wird geladen...</div>
-    </div>
-
-    <!-- Kunde & Reparaturschein-Nummer -->
-    <div class="input-group">
-      <div class="input-label">Kunde / Einsatzort</div>
-      <input type="text" id="kundeInput" class="input-field" placeholder="z. B. Textil Meyer, Stuttgart" style="margin-bottom: 10px;" />
-      
-      <div class="input-label">Auftrags-Nr. / Servicebericht</div>
-      <input type="text" id="repNrInput" class="input-field" placeholder="z. B. AT-2026-148 oder Schein-Nr." />
-    </div>
-
-    <!-- 1. WEGZEIT -->
-    <div class="section-title">Wegzeit (Fahrt zum / vom Kunden)</div>
-    <div class="btn-grid">
-      <button class="btn btn-blue" onclick="bucheEintrag('FAHRT_START', 'Fahrt Start')">
-        <span class="btn-icon">🚗</span>
-        <span>Fahrt Start</span>
-      </button>
-      <button class="btn btn-blue" onclick="bucheEintrag('FAHRT_ENDE', 'Fahrt Ende')">
-        <span class="btn-icon">🏁</span>
-        <span>Fahrt Ende</span>
-      </button>
-    </div>
-
-    <!-- 2. ARBEITSZEIT BEI KUNDE -->
-    <div class="section-title">Arbeitszeit vor Ort (beim Kunden)</div>
-    <div class="btn-grid">
-      <button class="btn btn-green" onclick="bucheEintrag('ARBEIT_START', 'Arbeit Start')">
-        <span class="btn-icon">🔧</span>
-        <span>Arbeit Start</span>
-      </button>
-      <button class="btn btn-green" onclick="bucheEintrag('ARBEIT_ENDE', 'Arbeit Ende')">
-        <span class="btn-icon">✔</span>
-        <span>Arbeit Ende</span>
-      </button>
-    </div>
-
-    <!-- 3. ALLGEMEIN -->
-    <div class="section-title">Allgemein</div>
-    <div class="btn-grid-3">
-      <button class="btn btn-green" onclick="bucheEintrag('KOMMEN', 'Kommen')">
-        <span class="btn-icon">▶</span>
-        <span>Kommen</span>
-      </button>
-      <button class="btn btn-yellow" onclick="bucheEintrag('PAUSE', 'Pause')">
-        <span class="btn-icon">☕</span>
-        <span>Pause</span>
-      </button>
-      <button class="btn btn-red" onclick="bucheEintrag('GEHEN', 'Gehen')">
-        <span class="btn-icon">🏠</span>
-        <span>Gehen</span>
-      </button>
-    </div>
-
-    <div class="toast" id="toastMsg">Bereit</div>
-
-    <div class="section-title">Letzte Buchungen</div>
-    <div class="history-card" id="historyList">
-      <div class="history-row" style="color: var(--muted);">Lade Buchungen...</div>
-    </div>
-
-    <button class="settings-btn" onclick="konfiguriereZugang()">⚙ Zugangsdaten einrichten</button>
-  </div>
-
-  <script>
-    let GH_USER = localStorage.getItem("gh_user") || "nasty007";
-    let GH_REPO = localStorage.getItem("gh_repo") || "Zeiterfassung";
-    let GH_TOKEN = localStorage.getItem("gh_token") || "";
-    let MITARBEITER = localStorage.getItem("gh_name") || "Josip Lazic (148)";
-
-    function aktualisiereUhrzeit() {
-      const now = new Date();
-      document.getElementById("liveClock").innerText = now.toTimeString().split(" ")[0];
-      const d = String(now.getDate()).padStart(2, "0");
-      const m = String(now.getMonth() + 1).padStart(2, "0");
-      document.getElementById("liveDate").innerText = `${d}.${m}.${now.getFullYear()}`;
-    }
-    setInterval(aktualisiereUhrzeit, 1000);
-    aktualisiereUhrzeit();
-
-    function getMonatsDateiname() {
-      const now = new Date();
-      return `zeiterfassung_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}.csv`;
-    }
-
-    function setToast(msg, isError = false) {
-      const el = document.getElementById("toastMsg");
-      el.innerText = msg;
-      el.style.color = isError ? "var(--red)" : "var(--muted)";
-    }
-
-    function konfiguriereZugang() {
-      const t = prompt("GitHub Personal Access Token (PAT):", GH_TOKEN);
-      if (t !== null) { GH_TOKEN = t.trim(); localStorage.setItem("gh_token", GH_TOKEN); }
-      const u = prompt("GitHub Benutzername:", GH_USER);
-      if (u !== null) { GH_USER = u.trim(); localStorage.setItem("gh_user", GH_USER); }
-      const r = prompt("Repository Name:", GH_REPO);
-      if (r !== null) { GH_REPO = r.trim(); localStorage.setItem("gh_repo", GH_REPO); }
-      ladeBuchungen();
-    }
-
-    async function ladeBuchungen() {
-      if (!GH_TOKEN) {
-        setToast("Bitte Zugangsdaten einrichten!", true);
-        return;
-      }
-      const url = `https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${getMonatsDateiname()}`;
-      try {
-        const res = await fetch(url, {
-          headers: { "Authorization": `Bearer ${GH_TOKEN}`, "Accept": "application/vnd.github.v3+json" }
-        });
-        if (!res.ok) {
-          setToast("Monatsdatei noch nicht vorhanden oder Token prüfen", true);
-          return;
-        }
-        const data = await res.json();
-        const csv = decodeURIComponent(escape(atob(data.content)));
-        verarbeiteCsv(csv);
-      } catch (err) {
-        setToast("Fehler beim Laden von GitHub", true);
-      }
-    }
-
-    function verarbeiteCsv(csv) {
-      const zeilen = csv.split("\n").filter(z => z.trim().length > 0);
-      const today = new Date().toISOString().slice(0, 10);
-      const listEl = document.getElementById("historyList");
-      listEl.innerHTML = "";
-
-      let heutige = [];
-      let letzterStatus = "Abgemeldet";
-
-      for (let i = 1; i < zeilen.length; i++) {
-        const c = zeilen[i].split(";");
-        if (c.length >= 3) {
-          const stamp = c[0].trim();
-          const stat  = c[2].trim();
-          let kunde   = "";
-          let repNr   = "";
-
-          if (c.length >= 7) {
-            // Neues Format mit Rep.-Nummer
-            kunde = c[3].trim();
-            repNr = c[4].trim();
-          } else if (c.length >= 4) {
-            // Bisheriges Format ohne Rep.-Nummer
-            kunde = c[3].trim();
-          }
-
-          if (stamp.startsWith(today)) {
-            heutige.push({ stamp, stat, kunde, repNr });
-            letzterStatus = stat;
-          }
-        }
-      }
-
-      // Status-Badge aktualisieren
-      const badge = document.getElementById("currentStatusBadge");
-      if (letzterStatus === "FAHRT_START") {
-        badge.className = "badge badge-fahrt";
-        badge.innerText = "Auf der Fahrt 🚗";
-      } else if (letzterStatus === "ARBEIT_START" || letzterStatus === "KOMMEN") {
-        badge.className = "badge badge-in";
-        badge.innerText = "Eingestempelt 🔧";
-      } else if (letzterStatus === "PAUSE") {
-        badge.className = "badge badge-pause";
-        badge.innerText = "In Pause ☕";
-      } else {
-        badge.className = "badge badge-out";
-        badge.innerText = "Abgemeldet / Frei";
-      }
-
-      if (heutige.length === 0) {
-        listEl.innerHTML = `<div class="history-row" style="color: var(--muted);">Heute noch keine Buchungen</div>`;
-        return;
-      }
-
-      heutige.reverse().slice(0, 8).forEach(e => {
-        const uhr = e.stamp.substring(11, 16);
-        let infoText = "";
-        if (e.kunde && e.kunde !== "-") infoText += e.kunde;
-        if (e.repNr && e.repNr !== "-") {
-          if (infoText.length > 0) infoText += " · ";
-          infoText += "Rep: " + e.repNr;
-        }
-
-        const row = document.createElement("div");
-        row.className = "history-row";
-        row.innerHTML = `
-          <div class="h-info">
-            <span>${uhr} Uhr</span>
-            ${infoText ? `<span class="h-kunde">${infoText}</span>` : ""}
-          </div>
-          <span class="h-status st-${e.stat}">${e.stat.replace('_', ' ')}</span>
-        `;
-        listEl.appendChild(row);
-      });
-    }
-
-    async function bucheEintrag(status, label) {
-      if (!GH_TOKEN) { konfiguriereZugang(); return; }
-      
-      const kunde = document.getElementById("kundeInput").value.trim();
-      const repNr = document.getElementById("repNrInput").value.trim();
-
-      let wegzeitInfo = "-";
-      let arbeitInfo = "-";
-
-      if (status === "FAHRT_START") wegzeitInfo = "Beginn Fahrt";
-      else if (status === "FAHRT_ENDE") wegzeitInfo = "Ankunft";
-      else if (status === "ARBEIT_START") arbeitInfo = "Beginn vor Ort";
-      else if (status === "ARBEIT_ENDE") arbeitInfo = "Ende vor Ort";
-
-      setToast(`Buche ${label}...`);
-      const datei = getMonatsDateiname();
-      const url = `https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${datei}`;
-
-      try {
-        let sha = "";
-        let inhalt = "Zeitstempel;Mitarbeiter;Status;Kunde;Rep_Nummer;Wegzeit;Arbeitszeit_Kunde\n";
-
-        const resGet = await fetch(url, {
-          headers: { "Authorization": `Bearer ${GH_TOKEN}`, "Accept": "application/vnd.github.v3+json" }
-        });
-        if (resGet.ok) {
-          const d = await resGet.json();
-          sha = d.sha;
-          inhalt = decodeURIComponent(escape(atob(d.content)));
-          if (!inhalt.endsWith("\n")) inhalt += "\n";
-
-          // Falls ein alter Tabellenkopf existiert, diesen automatisch aktualisieren
-          if (inhalt.startsWith("Zeitstempel;Mitarbeiter;Status;Kunde;Wegzeit;Arbeitszeit_Kunde")) {
-            inhalt = inhalt.replace(
-              "Zeitstempel;Mitarbeiter;Status;Kunde;Wegzeit;Arbeitszeit_Kunde",
-              "Zeitstempel;Mitarbeiter;Status;Kunde;Rep_Nummer;Wegzeit;Arbeitszeit_Kunde"
-            );
-          } else if (inhalt.startsWith("Zeitstempel;Mitarbeiter;Status\n")) {
-            inhalt = inhalt.replace(
-              "Zeitstempel;Mitarbeiter;Status\n",
-              "Zeitstempel;Mitarbeiter;Status;Kunde;Rep_Nummer;Wegzeit;Arbeitszeit_Kunde\n"
-            );
-          }
-        }
-
-        const now = new Date();
-        const stamp = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+    <div class="container">
         
-        // 7 Spalten einfügen
-        const neueZeile = `${stamp};${MITARBEITER};${status};${kunde || '-'};${repNr || '-'};${wegzeitInfo};${arbeitInfo}\n`;
-        const neuerInhalt = inhalt + neueZeile;
-        const b64 = btoa(unescape(encodeURIComponent(neuerInhalt)));
+        <div class="status-badge-container">
+            <div class="user-name" id="ui-username">Nutzer wird geladen...</div>
+            <div class="status-badge" id="ui-status">Lädt...</div>
+        </div>
 
-        const resPut = await fetch(url, {
-          method: "PUT",
-          headers: {
-            "Authorization": `Bearer ${GH_TOKEN}`,
-            "Content-Type": "application/json",
-            "Accept": "application/vnd.github.v3+json"
-          },
-          body: JSON.stringify({ message: `Service: ${label} (${stamp})`, content: b64, sha: sha || undefined })
-        });
+        <div class="dashboard-grid">
+            <div class="kachel">
+                <div class="kachel-title">Heute gearbeitet</div>
+                <div class="kachel-value val-kommen" id="ui-arbeitszeit">--:-- Std.</div>
+            </div>
+            <div class="kachel">
+                <div class="kachel-title">Pausenzeit</div>
+                <div class="kachel-value val-pause" id="ui-pausenzeit">--:-- Std.</div>
+            </div>
+            <div class="kachel kachel-ueberstunden">
+                <div class="kachel-title">Überstunden-Konto</div>
+                <div class="kachel-value val-ueberstunden" id="ui-ueberstunden">--.-- Std.</div>
+            </div>
+        </div>
 
-        if (resPut.ok) {
-          setToast(`Erfolgreich gebucht: ${label}`);
-          verarbeiteCsv(neuerInhalt);
-        } else {
-          setToast("Fehler beim Buchen auf GitHub", true);
+        <div class="booking-card">
+            <div class="input-group">
+                <label>Auftrags-Nr. / Reparaturschein (Optional)</label>
+                <input type="text" id="repNummer" placeholder="z.B. REP-4711">
+            </div>
+            <div class="input-group">
+                <label>Fahrtziel (Nur bei Fahrzeit-Buchung)</label>
+                <input type="text" id="fahrtZiel" placeholder="z.B. Bietigheim Krankenhaus">
+            </div>
+
+            <div class="btn-grid">
+                <button class="btn-action btn-kommen" onclick="buche('KOMMEN')">KOMMEN</button>
+                <button class="btn-action btn-pause" onclick="buche('PAUSE')">PAUSE</button>
+                <button class="btn-action btn-gehen" onclick="buche('GEHEN')">FEIERABEND</button>
+            </div>
+        </div>
+
+        <div class="historie-title">Letzte Buchungen</div>
+        <div class="historie-liste" id="historieContainer">
+            <div class="hist-item"><div class="hist-time">Daten werden geladen...</div></div>
+        </div>
+
+        <div id="syncInfo">Letzter Sync: Nie</div>
+    </div>
+
+    <script>
+        // ==========================================
+        // KONFIGURATION (MULTI-USER)
+        // ==========================================
+        let GH_USER = localStorage.getItem("gh_user") || "nasty007";
+        let GH_REPO = localStorage.getItem("gh_repo") || "Zeiterfassung";
+        let GH_TOKEN = localStorage.getItem("gh_token") || "";
+        
+        let GH_PNR   = localStorage.getItem("gh_pnr") || "148";
+        let GH_NAME  = localStorage.getItem("gh_name") || "Josip Lazic";
+        let UEBERSTUNDEN_START = parseFloat(localStorage.getItem("gh_ueberstunden_start") || "0.0");
+
+        let lokalerInhalt = "";
+        let letzterSha = "";
+
+        // ==========================================
+        // DATEINAME (Dynamisch nach Personalnummer)
+        // ==========================================
+        function getMonatsDateiname() {
+            const now = new Date();
+            const j = now.getFullYear();
+            const m = String(now.getMonth() + 1).padStart(2, '0');
+            // Generiert z. B. zeiterfassung_148_2026-10.csv
+            return `zeiterfassung_${GH_PNR}_${j}-${m}.csv`;
         }
-      } catch (err) {
-        setToast("Netzwerkfehler", true);
-      }
-    }
 
-    if (GH_TOKEN) ladeBuchungen();
-  </script>
+        // ==========================================
+        // EINSTELLUNGEN (ZAHNRAD)
+        // ==========================================
+        function konfiguriereZugang() {
+            const n = prompt("Dein Name:", GH_NAME);
+            if (n !== null) { GH_NAME = n.trim(); localStorage.setItem("gh_name", GH_NAME); }
+
+            const p = prompt("Deine Personalnummer (z.B. 148):", GH_PNR);
+            if (p !== null) { GH_PNR = p.trim(); localStorage.setItem("gh_pnr", GH_PNR); }
+
+            const u = prompt("Überstunden Startguthaben (z.B. 14.5 oder -2.0):", UEBERSTUNDEN_START);
+            if (u !== null) { 
+                UEBERSTUNDEN_START = parseFloat(u.replace(',', '.')); 
+                localStorage.setItem("gh_ueberstunden_start", UEBERSTUNDEN_START); 
+            }
+
+            const repo = prompt("Repository-Name:", GH_REPO);
+            if (repo !== null) { GH_REPO = repo.trim(); localStorage.setItem("gh_repo", GH_REPO); }
+            
+            const t = prompt("Personal Access Token (ghp_...):", GH_TOKEN);
+            if (t !== null) { GH_TOKEN = t.trim(); localStorage.setItem("gh_token", GH_TOKEN); }
+            
+            alert("Gespeichert! App wird neu geladen.");
+            location.reload();
+        }
+
+        // ==========================================
+        // HILFSFUNKTIONEN ZEITBERECHNUNG
+        // ==========================================
+        function getSekunden(uhrzeit) {
+            const p = uhrzeit.split(':');
+            return parseInt(p[0]) * 3600 + parseInt(p[1]) * 60 + parseInt(p[2]);
+        }
+
+        function formatiereSekunden(sek) {
+            const h = Math.floor(sek / 3600);
+            const m = Math.floor((sek % 3600) / 60);
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        }
+
+        // ==========================================
+        // GITHUB API ZUGRIFF
+        // ==========================================
+        async function ladeDatenVonGitHub() {
+            document.getElementById("ui-username").innerText = `${GH_NAME} (${GH_PNR})`;
+            if (!GH_TOKEN || GH_TOKEN.length < 10) {
+                document.getElementById("ui-status").innerText = "Token fehlt!";
+                return;
+            }
+
+            const url = `https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${getMonatsDateiname()}`;
+            try {
+                const response = await fetch(url, {
+                    headers: { "Authorization": `Bearer ${GH_TOKEN}`, "Accept": "application/vnd.github.v3+json" }
+                });
+
+                if (response.status === 404) {
+                    lokalerInhalt = "Zeitstempel;Mitarbeiter;Status;AuftragsNr;Fahrtziel\n";
+                    letzterSha = "";
+                    aktualisiereUI();
+                    return;
+                }
+
+                if (!response.ok) throw new Error("Fehler beim Laden");
+
+                const data = await response.json();
+                letzterSha = data.sha;
+                lokalerInhalt = decodeURIComponent(escape(atob(data.content)));
+                
+                const now = new Date();
+                document.getElementById("syncInfo").innerText = `Letzter Sync: ${now.toLocaleTimeString()}`;
+                
+                aktualisiereUI();
+            } catch (err) {
+                alert("Verbindungsfehler zu GitHub.");
+                console.error(err);
+            }
+        }
+
+        async function sichereDatenAufGitHub(neuerInhalt, commitMessage) {
+            document.getElementById("ui-status").innerText = "Speichert...";
+            const url = `https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${getMonatsDateiname()}`;
+            
+            const b64Content = btoa(unescape(encodeURIComponent(neuerInhalt)));
+            const bodyData = { message: commitMessage, content: b64Content };
+            if (letzterSha) bodyData.sha = letzterSha;
+
+            try {
+                const response = await fetch(url, {
+                    method: 'PUT',
+                    headers: { "Authorization": `Bearer ${GH_TOKEN}`, "Content-Type": "application/json" },
+                    body: JSON.stringify(bodyData)
+                });
+
+                if (!response.ok) throw new Error("Speichern fehlgeschlagen");
+                
+                document.getElementById("repNummer").value = "";
+                document.getElementById("fahrtZiel").value = "";
+                ladeDatenVonGitHub();
+            } catch (err) {
+                alert("Fehler beim Speichern!");
+                console.error(err);
+            }
+        }
+
+        function buche(status) {
+            const rep = document.getElementById("repNummer").value.trim();
+            const ziel = document.getElementById("fahrtZiel").value.trim();
+            
+            const now = new Date();
+            const timestamp = now.getFullYear() + "-" + 
+                              String(now.getMonth() + 1).padStart(2, '0') + "-" + 
+                              String(now.getDate()).padStart(2, '0') + " " + 
+                              String(now.getHours()).padStart(2, '0') + ":" + 
+                              String(now.getMinutes()).padStart(2, '0') + ":" + 
+                              String(now.getSeconds()).padStart(2, '0');
+
+            const neueZeile = `${timestamp};${GH_NAME};${status};${rep};${ziel}\n`;
+            if (lokalerInhalt === "") {
+                lokalerInhalt = "Zeitstempel;Mitarbeiter;Status;AuftragsNr;Fahrtziel\n";
+            }
+            
+            const neuerInhalt = lokalerInhalt + neueZeile;
+            sichereDatenAufGitHub(neuerInhalt, `Web-Buchung: ${status}`);
+        }
+
+        // ==========================================
+        // UI & DASHBOARD LOGIK
+        // ==========================================
+        function aktualisiereUI() {
+            const zeilen = lokalerInhalt.split('\n').filter(z => z.length > 10 && !z.startsWith("Zeitstempel"));
+            if (zeilen.length === 0) return;
+
+            const now = new Date();
+            const heuteTag = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, '0') + "-" + String(now.getDate()).padStart(2, '0');
+            const wochentag = now.getDay(); 
+
+            let arbeitSekundenHeute = 0;
+            let pauseSekundenHeute = 0;
+            let letzterStatusWechsel = 0;
+            let letzterStatus = "";
+            let ersterStartSek = -1;
+
+            const htmlZeilen = [];
+
+            // Alle Zeilen auswerten
+            for (let i = 0; i < zeilen.length; i++) {
+                const z = zeilen[i];
+                const parts = z.split(';');
+                if (parts.length < 3) continue;
+
+                const stamp = parts[0];
+                let statusRaw = parts[2].trim();
+                let repNummer = (parts.length > 3) ? parts[3].trim() : "";
+                
+                // Normalisieren
+                let istKommen = (statusRaw === "START" || statusRaw === "KOMMEN" || statusRaw === "ARBEIT_START");
+                let istPause  = (statusRaw === "PAUSE");
+                let istGehen  = (statusRaw === "ENDE" || statusRaw === "GEHEN" || statusRaw === "ARBEIT_ENDE");
+
+                let anzeigeStatus = istKommen ? "KOMMEN" : (istPause ? "PAUSE" : "GEHEN");
+                let badgeClass = istKommen ? "bg-kommen" : (istPause ? "bg-pause" : "bg-gehen");
+
+                // Historie-Liste füllen (Rückwärts, max 10 Einträge)
+                if (zeilen.length - i <= 10) {
+                    const uhrzeit = stamp.substring(11, 19);
+                    const datumKurz = stamp.substring(8, 10) + "." + stamp.substring(5, 7) + ".";
+                    let metaHTML = `<span class="hist-meta">${datumKurz}</span>`;
+                    if (repNummer) metaHTML += `<span class="hist-meta" style="color:var(--text-light)"> | ${repNummer}</span>`;
+
+                    htmlZeilen.unshift(`
+                        <div class="hist-item">
+                            <div class="hist-info">
+                                <span class="hist-time">${uhrzeit}</span>
+                                ${metaHTML}
+                            </div>
+                            <span class="hist-badge ${badgeClass}">${anzeigeStatus}</span>
+                        </div>
+                    `);
+                }
+
+                // Zeiten für Heute berechnen
+                if (stamp.startsWith(heuteTag)) {
+                    const sec = getSekunden(stamp.substring(11, 19));
+                    
+                    if (ersterStartSek < 0 && istKommen) ersterStartSek = sec;
+
+                    if (letzterStatus === "KOMMEN") {
+                        arbeitSekundenHeute += (sec - letzterStatusWechsel);
+                    } else if (letzterStatus === "PAUSE") {
+                        pauseSekundenHeute += (sec - letzterStatusWechsel);
+                    }
+
+                    letzterStatus = istKommen ? "KOMMEN" : (istPause ? "PAUSE" : "GEHEN");
+                    letzterStatusWechsel = sec;
+                }
+            }
+
+            document.getElementById("historieContainer").innerHTML = htmlZeilen.join('');
+
+            // Status Badge Aktualisieren
+            const statusEl = document.getElementById("ui-status");
+            statusEl.className = "status-badge";
+            if (letzterStatus === "KOMMEN") {
+                statusEl.classList.add("status-kommen");
+                statusEl.innerText = "Eingestempelt";
+            } else if (letzterStatus === "PAUSE") {
+                statusEl.classList.add("status-pause");
+                statusEl.innerText = "In Pause";
+            } else if (letzterStatus === "GEHEN") {
+                statusEl.classList.add("status-gehen");
+                statusEl.innerText = "Feierabend";
+            } else {
+                statusEl.innerText = "Abgemeldet";
+            }
+
+            // Live-Zeiten dazurechnen (wie am Terminal)
+            const jetzSek = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+            if (letzterStatus === "KOMMEN") {
+                arbeitSekundenHeute += (jetzSek - letzterStatusWechsel);
+            } else if (letzterStatus === "PAUSE") {
+                pauseSekundenHeute += (jetzSek - letzterStatusWechsel);
+            }
+
+            document.getElementById("ui-arbeitszeit").innerText = formatiereSekunden(arbeitSekundenHeute) + " Std.";
+            document.getElementById("ui-pausenzeit").innerText = formatiereSekunden(pauseSekundenHeute) + " Std.";
+
+            // Überstunden berechnen
+            let tagesSoll = 30600; // 8.5h
+            if (wochentag === 5) tagesSoll = 18000; // 5.0h Fr
+            if (wochentag === 0 || wochentag === 6) tagesSoll = 0; // WE
+
+            let heuteUeberSek = 0;
+            if (arbeitSekundenHeute > tagesSoll) {
+                heuteUeberSek = arbeitSekundenHeute - tagesSoll;
+            }
+
+            const aktuellesKonto = UEBERSTUNDEN_START + (heuteUeberSek / 3600.0);
+            
+            const uKachel = document.getElementById("ui-ueberstunden");
+            uKachel.innerText = (aktuellesKonto > 0 ? "+" : "") + aktuellesKonto.toFixed(2) + " Std.";
+            
+            if (aktuellesKonto < 0) {
+                uKachel.classList.add("minus");
+            } else {
+                uKachel.classList.remove("minus");
+            }
+        }
+
+        // Start
+        ladeDatenVonGitHub();
+        // Live-Tick jede Sekunde
+        setInterval(aktualisiereUI, 1000);
+    </script>
 </body>
 </html>
