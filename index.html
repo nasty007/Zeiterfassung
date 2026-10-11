@@ -192,11 +192,12 @@
             
             <div class="user-card">
                 <div class="user-name" id="ui-username">Lade...</div>
-                <div class="user-title">Elektrotechniker Außendienst</div>
+                <!-- Dynamisches Feld für die Funktion -->
+                <div class="user-title" id="ui-usertitle">Lade...</div>
                 <div class="status-badge" id="ui-status">Lädt...</div>
             </div>
 
-            <!-- Eingabefelder mit getauschter Reihenfolge -->
+            <!-- Eingabefelder -->
             <div class="input-card">
                 <div class="input-group">
                     <label>KUNDE / EINSATZORT</label>
@@ -295,8 +296,9 @@
         let GH_REPO = localStorage.getItem("gh_repo") || "Zeiterfassung";
         let GH_TOKEN = localStorage.getItem("gh_token") || "";
         
-        let GH_PNR   = localStorage.getItem("gh_pnr") || "148";
-        let GH_NAME  = localStorage.getItem("gh_name") || "Josip Lazic";
+        let GH_PNR      = localStorage.getItem("gh_pnr") || "148";
+        let GH_NAME     = localStorage.getItem("gh_name") || "Josip Lazic";
+        let GH_FUNKTION = localStorage.getItem("gh_funktion") || "Elektrotechniker";
         let UEBERSTUNDEN_START = parseFloat(localStorage.getItem("gh_ueberstunden_start") || "0.0");
 
         let lokalerInhalt = "";
@@ -315,6 +317,10 @@
 
             const p = prompt("Deine Personalnummer (z.B. 148):", GH_PNR);
             if (p !== null) { GH_PNR = p.trim(); localStorage.setItem("gh_pnr", GH_PNR); }
+
+            // NEU: Abfrage der Funktion/Position
+            const f = prompt("Deine Funktion/Position (z.B. Elektrotechniker):", GH_FUNKTION);
+            if (f !== null) { GH_FUNKTION = f.trim(); localStorage.setItem("gh_funktion", GH_FUNKTION); }
 
             const u = prompt("Überstunden Startguthaben (z.B. 14.5 oder -2.0):", UEBERSTUNDEN_START);
             if (u !== null) { 
@@ -350,6 +356,8 @@
         // ==========================================
         async function ladeDatenVonGitHub() {
             document.getElementById("ui-username").innerText = `${GH_NAME} (${GH_PNR})`;
+            document.getElementById("ui-usertitle").innerText = GH_FUNKTION; // Hier wird die Funktion ins UI geschrieben
+            
             if (!GH_TOKEN || GH_TOKEN.length < 10) {
                 document.getElementById("ui-status").innerText = "Token fehlt!";
                 return;
