@@ -103,8 +103,11 @@
             background: var(--card-bg); border: 1px solid var(--card-border);
             border-radius: 12px; padding: 16px; margin-bottom: 20px;
         }
-        .input-card label { display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px; letter-spacing: 0.5px; }
-        .input-card input {
+        .input-group { margin-bottom: 16px; }
+        .input-group:last-child { margin-bottom: 0; }
+        
+        .input-group label { display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px; letter-spacing: 0.5px; }
+        .input-group input {
             width: 100%; padding: 14px; border-radius: 8px; border: 1px solid var(--card-border);
             background: var(--bg); color: var(--text-light); font-size: 15px;
         }
@@ -189,14 +192,20 @@
             
             <div class="user-card">
                 <div class="user-name" id="ui-username">Lade...</div>
-                <!-- Deine spezifische Korrektur: Elektrotechniker anstatt Servicetechniker -->
                 <div class="user-title">Elektrotechniker Außendienst</div>
                 <div class="status-badge" id="ui-status">Lädt...</div>
             </div>
 
+            <!-- Eingabefelder mit getauschter Reihenfolge -->
             <div class="input-card">
-                <label>KUNDE / EINSATZORT</label>
-                <input type="text" id="kundenEingabe" placeholder="z. B. Textil Meyer, Stuttgart">
+                <div class="input-group">
+                    <label>KUNDE / EINSATZORT</label>
+                    <input type="text" id="kundenEingabe" placeholder="z. B. Textil Meyer, Stuttgart">
+                </div>
+                <div class="input-group">
+                    <label>AUFTRAGS-NR. / REPARATURSCHEIN (OPTIONAL)</label>
+                    <input type="text" id="repNummer" placeholder="z. B. REP-4711">
+                </div>
             </div>
 
             <div class="section-title">WEGZEIT (FAHRT ZUM / VOM KUNDEN)</div>
@@ -353,7 +362,7 @@
                 });
 
                 if (response.status === 404) {
-                    lokalerInhalt = "Zeitstempel;Mitarbeiter;Status;KundeOrt\n";
+                    lokalerInhalt = "Zeitstempel;Mitarbeiter;Status;RepNummer;KundeOrt\n";
                     letzterSha = "";
                     aktualisiereUI();
                     return;
@@ -387,6 +396,7 @@
                 });
                 if (!response.ok) throw new Error("Speichern fehlgeschlagen");
                 
+                document.getElementById("repNummer").value = "";
                 document.getElementById("kundenEingabe").value = "";
                 ladeDatenVonGitHub();
             } catch (err) {
@@ -395,12 +405,13 @@
         }
 
         function buche(status) {
+            const rep = document.getElementById("repNummer").value.trim();
             const kunde = document.getElementById("kundenEingabe").value.trim();
             const now = new Date();
             const timestamp = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, '0') + "-" + String(now.getDate()).padStart(2, '0') + " " + String(now.getHours()).padStart(2, '0') + ":" + String(now.getMinutes()).padStart(2, '0') + ":" + String(now.getSeconds()).padStart(2, '0');
 
-            const neueZeile = `${timestamp};${GH_NAME};${status};${kunde}\n`;
-            if (lokalerInhalt === "") lokalerInhalt = "Zeitstempel;Mitarbeiter;Status;KundeOrt\n";
+            const neueZeile = `${timestamp};${GH_NAME};${status};${rep};${kunde}\n`;
+            if (lokalerInhalt === "") lokalerInhalt = "Zeitstempel;Mitarbeiter;Status;RepNummer;KundeOrt\n";
             sichereDatenAufGitHub(lokalerInhalt + neueZeile, `Web-Buchung: ${status}`);
         }
 
@@ -429,7 +440,8 @@
 
                 const stamp = parts[0];
                 let statusRaw = parts[2].trim();
-                let kunde = (parts.length > 3) ? parts[3].trim() : "";
+                let repNummer = (parts.length > 3) ? parts[3].trim() : "";
+                let kunde = (parts.length > 4) ? parts[4].trim() : "";
                 
                 let isArbeit = (statusRaw === "KOMMEN" || statusRaw === "FAHRT START" || statusRaw === "ARBEIT START" || statusRaw === "FAHRT ENDE" || statusRaw === "ARBEIT ENDE" || statusRaw === "START");
                 let isPause  = (statusRaw === "PAUSE");
@@ -444,6 +456,8 @@
                 if (zeilen.length - i <= 10) {
                     const uhrzeit = stamp.substring(11, 16) + " Uhr";
                     let metaHTML = `<span class="hist-meta">${stamp.substring(8, 10)}.${stamp.substring(5, 7)}.</span>`;
+                    
+                    if (repNummer) metaHTML += `<br><span class="hist-meta">📄 ${repNummer}</span>`;
                     if (kunde) metaHTML += `<br><span class="hist-meta">📍 ${kunde}</span>`;
 
                     htmlZeilen.unshift(`
@@ -464,7 +478,6 @@
                     letzterStatus = isArbeit ? "ARBEIT" : (isPause ? "PAUSE" : "GEHEN");
                     letzterStatusWechsel = sec;
                     
-                    // Für das Status-Badge ganz oben speichern wir den genauen Wortlaut
                     document.aktuellerStatusRaw = statusRaw;
                 }
             }
