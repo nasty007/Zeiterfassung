@@ -192,7 +192,6 @@
             
             <div class="user-card">
                 <div class="user-name" id="ui-username">Lade...</div>
-                <!-- Dynamisches Feld für die Funktion -->
                 <div class="user-title" id="ui-usertitle">Lade...</div>
                 <div class="status-badge" id="ui-status">Lädt...</div>
             </div>
@@ -318,7 +317,6 @@
             const p = prompt("Deine Personalnummer (z.B. 148):", GH_PNR);
             if (p !== null) { GH_PNR = p.trim(); localStorage.setItem("gh_pnr", GH_PNR); }
 
-            // NEU: Abfrage der Funktion/Position
             const f = prompt("Deine Funktion/Position (z.B. Elektrotechniker):", GH_FUNKTION);
             if (f !== null) { GH_FUNKTION = f.trim(); localStorage.setItem("gh_funktion", GH_FUNKTION); }
 
@@ -356,7 +354,7 @@
         // ==========================================
         async function ladeDatenVonGitHub() {
             document.getElementById("ui-username").innerText = `${GH_NAME} (${GH_PNR})`;
-            document.getElementById("ui-usertitle").innerText = GH_FUNKTION; // Hier wird die Funktion ins UI geschrieben
+            document.getElementById("ui-usertitle").innerText = GH_FUNKTION;
             
             if (!GH_TOKEN || GH_TOKEN.length < 10) {
                 document.getElementById("ui-status").innerText = "Token fehlt!";
@@ -379,7 +377,14 @@
 
                 const data = await response.json();
                 letzterSha = data.sha;
-                lokalerInhalt = decodeURIComponent(escape(atob(data.content)));
+                
+                // Base64 sicher decodieren (unterstützt Umlaute)
+                const binString = atob(data.content);
+                const bytes = new Uint8Array(binString.length);
+                for (let i = 0; i < binString.length; i++) {
+                    bytes[i] = binString.charCodeAt(i);
+                }
+                lokalerInhalt = new TextDecoder().decode(bytes);
                 
                 const now = new Date();
                 document.getElementById("syncInfo").innerText = `Letzter Sync: ${now.toLocaleTimeString()}`;
@@ -389,15 +394,13 @@
             }
         }
 
-async function sichereDatenAufGitHub(neuerInhalt, commitMessage) {
+        async function sichereDatenAufGitHub(neuerInhalt, commitMessage) {
             document.getElementById("ui-status").innerText = "Speichert...";
             const url = `https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${getMonatsDateiname()}`;
             
-            // NEU: Sicheres Base64-Encoding für alle deutschen Umlaute & Sonderzeichen
+            // NEU: UTF-8 sicheres Base64-Encoding (Für Umlaute & Sonderzeichen)
             const bytes = new TextEncoder().encode(neuerInhalt);
-            const binString = Array.from(bytes, (byte) =>
-              String.fromCodePoint(byte)
-            ).join("");
+            const binString = Array.from(bytes, (byte) => String.fromCodePoint(byte)).join("");
             const b64Content = btoa(binString);
 
             const bodyData = { message: commitMessage, content: b64Content };
@@ -412,14 +415,12 @@ async function sichereDatenAufGitHub(neuerInhalt, commitMessage) {
                 
                 if (!response.ok) {
                     const errData = await response.json();
-                    throw new Error(`GitHub meldet: ${errData.message}`);
+                    throw new Error(errData.message);
                 }
                 
-                // Felder nach erfolgreichem Speichern leeren
                 document.getElementById("repNummer").value = "";
                 document.getElementById("kundenEingabe").value = "";
                 ladeDatenVonGitHub();
-                
             } catch (err) {
                 alert(`Fehler beim Speichern!\n${err.message}`);
             }
@@ -468,7 +469,6 @@ async function sichereDatenAufGitHub(neuerInhalt, commitMessage) {
                 let isPause  = (statusRaw === "PAUSE");
                 let isGehen  = (statusRaw === "GEHEN" || statusRaw === "ENDE" || statusRaw === "ARBEIT_ENDE");
 
-                // Badge Logik für Historie
                 let badgeClass = "b-def";
                 if(statusRaw.includes("KOMMEN") || statusRaw.includes("START")) badgeClass = "b-kom";
                 if(statusRaw.includes("PAUSE")) badgeClass = "b-pau";
@@ -505,14 +505,25 @@ async function sichereDatenAufGitHub(neuerInhalt, commitMessage) {
 
             document.getElementById("historieContainer").innerHTML = htmlZeilen.join('');
 
-            // Großes User Status-Badge aktualisieren
+            // --- LÖSUNG FÜR DAS "ARBEIT ENDE = UNTERWEGS" VERHALTEN ---
             const statusEl = document.getElementById("ui-status");
             const raw = document.aktuellerStatusRaw || "";
             
             if (letzterStatus === "ARBEIT") {
-                if(raw === "FAHRT START") { statusEl.className = "status-badge bg-blue"; statusEl.innerText = "Unterwegs 🚗"; }
-                else if(raw === "ARBEIT START") { statusEl.className = "status-badge bg-green"; statusEl.innerText = "Beim Kunden 🔧"; }
-                else { statusEl.className = "status-badge bg-green"; statusEl.innerText = "Eingestempelt"; }
+                // Wenn Fahrt Start ODER Arbeit Ende gedrückt wurde -> Unterwegs 🚗
+                if(raw === "FAHRT START" || raw === "ARBEIT ENDE") { 
+                    statusEl.className = "status-badge bg-blue"; 
+                    statusEl.innerText = "Unterwegs 🚗"; 
+                }
+                else if(raw === "ARBEIT START") { 
+                    statusEl.className = "status-badge bg-green"; 
+                    statusEl.innerText = "Beim Kunden 🔧"; 
+                }
+                else { 
+                    // Normale Arbeitszeit im Haus (Kommen, Fahrt Ende)
+                    statusEl.className = "status-badge bg-green"; 
+                    statusEl.innerText = "Eingestempelt"; 
+                }
             } else if (letzterStatus === "PAUSE") {
                 statusEl.className = "status-badge bg-orange"; statusEl.innerText = "In Pause ☕";
             } else if (letzterStatus === "GEHEN") {
