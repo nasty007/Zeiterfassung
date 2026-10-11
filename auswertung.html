@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Auswertung - NÄHTEC</title>
+    <meta name="theme-color" content="#12141C">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #12141C;
+            --header: #181E24;
+            --nahtec-rot: #D14444;
+            --card-bg: #1E232B;
+            --card-border: #323A46;
+            --btn-bg: #272D38;
+            --text-light: #FFFFFF;
+            --text-muted: #8E9BAE;
+            --col-kommen: #10B981;
+            --col-gehen:  #EF4444;
+            --col-fahrt:  #3B82F6;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+
+        body { background-color: var(--bg); color: var(--text-light); -webkit-font-smoothing: antialiased; }
+
+        .header {
+            background: var(--header);
+            border-bottom: 2px solid var(--nahtec-rot);
+            padding: calc(env(safe-area-inset-top) + 16px) 20px 16px 20px;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .logo-img { width: 38px; height: 38px; border-radius: 4px; object-fit: contain; }
+        .logo-nahtec { color: var(--nahtec-rot); font-size: 20px; font-weight: 700; letter-spacing: 0.5px; }
+        .logo-subtitle { color: var(--text-muted); font-size: 14px; font-weight: 600; }
+
+        .container { padding: 20px; }
+        
+        .controls {
+            background: var(--card-bg); border: 1px solid var(--card-border);
+            border-radius: 12px; padding: 20px; margin-bottom: 20px;
+            display: flex; flex-direction: column; gap: 15px;
+        }
+        
+        input[type="month"] {
+            padding: 12px; border-radius: 8px; border: 1px solid var(--card-border);
+            background: var(--bg); color: var(--text-light); font-size: 16px;
+        }
+
+        .btn-action {
+            background: var(--btn-bg); border: 1px solid var(--card-border);
+            border-radius: 8px; padding: 14px; color: var(--text-light); 
+            font-weight: 600; font-size: 14px; cursor: pointer; text-align: center;
+        }
+        .btn-action.primary { background: var(--col-fahrt); border: none; }
+        .btn-action.excel { background: var(--col-kommen); border: none; color: #fff; margin-top: 10px; display: none;}
+
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+        th, td { border: 1px solid var(--card-border); padding: 10px 8px; text-align: center; }
+        th { background: var(--header); color: var(--text-muted); font-weight: 600; }
+        tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+        
+        .plus { color: var(--col-kommen); }
+        .minus { color: var(--col-gehen); }
+        #statusInfo { color: var(--text-muted); font-size: 13px; margin-bottom: 10px;}
+        
+        .nav-link { color: var(--text-muted); text-decoration: none; font-size: 14px; margin-bottom: 20px; display: inline-block; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <img src="logo.png" alt="Nähtec Logo" class="logo-img" onerror="this.style.display='none'">
+        <div style="display: flex; align-items: baseline; gap: 6px;">
+            <div class="logo-nahtec">NÄHTEC</div>
+            <div class="logo-subtitle">Monats-Auswertung</div>
+        </div>
+    </div>
+
+    <div class="container">
+        <a href="index.html" class="nav-link">← Zurück zur Buchung</a>
+
+        <div class="controls">
+            <label style="font-size: 12px; color: var(--text-muted); font-weight: bold; text-transform: uppercase;">Auszurechnender Monat:</label>
+            <input type="month" id="monatPicker">
+            <button class="btn-action primary" onclick="ladeMonat()">Daten abrufen & berechnen</button>
+        </div>
+
+        <div id="statusInfo"></div>
+        <button id="btnExcel" class="btn-action excel" onclick="exportCSV()">📥 Als fertig berechnete Excel-Tabelle speichern</button>
+
+        <div style="overflow-x: auto;">
+            <table id="auswertungsTabelle" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Datum</th>
+                        <th>Start</th>
+                        <th>Ende</th>
+                        <th>Pause</th>
+                        <th>Arbeit (h)</th>
+                        <th>Überst.</th>
+                    </tr>
+                </thead>
+                <tbody id="tBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let GH_USER = localStorage.getItem("gh_user");
+        let GH_REPO = localStorage.getItem("gh_repo");
+        let GH_TOKEN = localStorage.getItem("gh_token");
+        let GH_PNR = localStorage.getItem("gh_pnr");
+        
+        let fertigeDaten = [];
+
+        window.onload = function() {
+            const now = new Date();
+            const m = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, '0');
+            document.getElementById("monatPicker").value = m;
+        }
+
+        function getSekunden(uhrzeit) {
+            const p = uhrzeit.split(':');
+            return parseInt(p[0]) * 3600 + parseInt(p[1]) * 60 + parseInt(p[2]);
+        }
+
+        function formatStd(sek) {
+            const h = Math.floor(sek / 3600);
+            const m = Math.floor((sek % 3600) / 60);
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        }
+
+        // Formatiert Zahlen mit Komma für das deutsche Excel
+        function formatExcelDezimal(sek) {
+            return (sek / 3600.0).toFixed(2).replace('.', ','); 
+        }
+
+        async function ladeMonat() {
+            if (!GH_TOKEN) {
+                alert("Bitte logge dich zuerst in der Haupt-App über das Zahnrad ein.");
+                return;
+            }
+
+            const val = document.getElementById("monatPicker").value;
+            if (!val) return;
+            const [jahr, monat] = val.split("-");
+            const dateiName = `zeiterfassung_${GH_PNR}_${jahr}-${monat}.csv`;
+            const url = `https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${dateiName}`;
+
+            document.getElementById("statusInfo").innerText = "Lade Daten von GitHub...";
+            document.getElementById("btnExcel").style.display = "none";
+            document.getElementById("auswertungsTabelle").style.display = "none";
+
+            try {
+                const response = await fetch(url, {
+                    headers: { "Authorization": `Bearer ${GH_TOKEN}`, "Accept": "application/vnd.github.v3+json" }
+                });
+
+                if (response.status === 404) {
+                    document.getElementById("statusInfo").innerText = "Für diesen Monat liegen noch keine Buchungen vor.";
+                    return;
+                }
+                if (!response.ok) throw new Error("Fehler beim Laden");
+
+                const data = await response.json();
+                
+                // Base64 sicher nach UTF-8 decodieren (wegen Umlauten in Kundennamen)
+                const binString = atob(data.content);
+                const bytes = new Uint8Array(binString.length);
+                for (let i = 0; i < binString.length; i++) bytes[i] = binString.charCodeAt(i);
+                const csvText = new TextDecoder().decode(bytes);
+
+                berechneTage(csvText);
+                document.getElementById("statusInfo").innerText = "Berechnung abgeschlossen.";
+                document.getElementById("btnExcel").style.display = "block";
+                document.getElementById("auswertungsTabelle").style.display = "table";
+
+            } catch (err) {
+                document.getElementById("statusInfo").innerText = "Fehler: " + err.message;
+            }
+        }
+
+        function berechneTage(csvInhalt) {
+            const zeilen = csvInhalt.split('\n').filter(z => z.length > 10 && !z.startsWith("Zeitstempel"));
+            let tageMap = {};
+
+            for (let z of zeilen) {
+                const parts = z.split(';');
+                if (parts.length < 3) continue;
+
+                const stamp = parts[0]; 
+                const statusRaw = parts[2].trim();
+                const datum = stamp.substring(0, 10);
+                const sec = getSekunden(stamp.substring(11, 19));
+
+                if (!tageMap[datum]) {
+                    tageMap[datum] = { ersterStart: "", letztesEnde: "", arbeitSek: 0, pauseSek: 0, letzterStatus: "", letzterWechsel: 0 };
+                }
+
+                let t = tageMap[datum];
+                let isArbeit = (statusRaw === "KOMMEN" || statusRaw === "FAHRT START" || statusRaw === "ARBEIT START" || statusRaw === "FAHRT ENDE" || statusRaw === "ARBEIT ENDE" || statusRaw === "START");
+                let isPause  = (statusRaw === "PAUSE");
+                let isGehen  = (statusRaw === "GEHEN" || statusRaw === "ENDE" || statusRaw === "ARBEIT_ENDE");
+
+                if (t.ersterStart === "" && isArbeit) t.ersterStart = stamp.substring(11, 16);
+                
+                // Wir merken uns bei jedem Klick die letzte Zeit als potenziellen Feierabend
+                t.letztesEnde = stamp.substring(11, 16);
+
+                if (t.letzterStatus === "ARBEIT") t.arbeitSek += (sec - t.letzterWechsel);
+                else if (t.letzterStatus === "PAUSE") t.pauseSek += (sec - t.letzterWechsel);
+
+                t.letzterStatus = isArbeit ? "ARBEIT" : (isPause ? "PAUSE" : "GEHEN");
+                t.letzterWechsel = sec;
+            }
+
+            // Heute abfangen, falls gerade Live eingestempelt ist
+            const now = new Date();
+            const heuteStr = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, '0') + "-" + String(now.getDate()).padStart(2, '0');
+            if (tageMap[heuteStr]) {
+                let t = tageMap[heuteStr];
+                let jetzSek = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+                if (t.letzterStatus === "ARBEIT") { t.arbeitSek += (jetzSek - t.letzterWechsel); t.letztesEnde = "Live"; }
+                else if (t.letzterStatus === "PAUSE") { t.pauseSek += (jetzSek - t.letzterWechsel); t.letztesEnde = "Live"; }
+            }
+
+            fertigeDaten = [];
+            let htmlBody = "";
+            let keys = Object.keys(tageMap).sort();
+
+            for (let d of keys) {
+                let t = tageMap[d];
+
+                // Wochentag ermitteln für Überstunden-Soll
+                let parts = d.split("-");
+                let dObj = new Date(parts[0], parseInt(parts[1]) - 1, parts[2]);
+                let wday = dObj.getDay();
+
+                let tagesSoll = 30600; // 8.5h Mo-Do
+                if (wday === 5) tagesSoll = 18000; // 5h Freitag
+                if (wday === 0 || wday === 6) tagesSoll = 0; // Wochenende
+
+                let ueberSek = t.arbeitSek - tagesSoll;
+                let datumKurz = `${parts[2]}.${parts[1]}.${parts[0]}`;
+
+                fertigeDaten.push({
+                    datum: datumKurz,
+                    start: t.ersterStart || "--:--",
+                    ende: t.letztesEnde || "--:--",
+                    pause: formatStd(t.pauseSek),
+                    arbeit: formatExcelDezimal(t.arbeitSek),
+                    ueber: formatExcelDezimal(ueberSek)
+                });
+
+                // Für die HTML Anzeige auf dem Handy
+                let ueberClass = ueberSek >= 0 ? "plus" : "minus";
+                let ueberVorzeichen = ueberSek > 0 ? "+" : "";
+
+                htmlBody += `
+                    <tr>
+                        <td>${parts[2]}.${parts[1]}.</td>
+                        <td>${t.ersterStart || "--"}</td>
+                        <td>${t.letztesEnde || "--"}</td>
+                        <td>${formatStd(t.pauseSek)}</td>
+                        <td><b>${(t.arbeitSek / 3600).toFixed(2)}</b></td>
+                        <td class="${ueberClass}">${ueberVorzeichen}${(ueberSek / 3600).toFixed(2)}</td>
+                    </tr>
+                `;
+            }
+
+            document.getElementById("tBody").innerHTML = htmlBody;
+        }
+
+        // ==========================================
+        // EXCEL EXPORT (MIT BOM & DEUTSCHEM FORMAT)
+        // ==========================================
+        function exportCSV() {
+            if (fertigeDaten.length === 0) return;
+
+            // Excel Header mit Semikolon getrennt
+            let csvContent = "Datum;Erster Start;Letzte Buchung;Pausenzeit;Arbeitszeit (Dezimal);Ueberstunden (Dezimal)\n";
+            
+            for (let d of fertigeDaten) {
+                csvContent += `${d.datum};${d.start};${d.ende};${d.pause};${d.arbeit};${d.ueber}\n`;
+            }
+
+            // Das \ufeff (Byte Order Mark) zwingt das deutsche Excel, Umlaute und Zeichen korrekt zu erkennen
+            let blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+            let url = URL.createObjectURL(blob);
+            
+            let a = document.createElement("a");
+            a.href = url;
+            let m = document.getElementById("monatPicker").value;
+            a.download = `Naehtec_Monatsauswertung_${GH_PNR}_${m}.csv`;
+            
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    </script>
+</body>
+</html>
