@@ -45,8 +45,9 @@
             z-index: 100;
         }
 
-        .logo-area { display: flex; align-items: center; gap: 8px; }
-        .logo-img { width: 26px; height: 26px; border-radius: 4px; object-fit: contain; }
+        .logo-area { display: flex; align-items: center; gap: 10px; }
+        /* Logo deutlich vergrößert */
+        .logo-img { width: 38px; height: 38px; border-radius: 4px; object-fit: contain; }
         
         .logo-text-wrapper { display: flex; align-items: baseline; gap: 6px; }
         .logo-nahtec { color: var(--nahtec-rot); font-size: 20px; font-weight: 700; letter-spacing: 0.5px; }
@@ -132,18 +133,17 @@
         .btn-action span { font-size: 20px; }
 
         /* --- Seite 2: Dashboard & Historie --- */
-        .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+        .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
         .kachel {
             background: var(--card-bg); border: 1px solid var(--card-border);
             border-radius: 12px; padding: 16px; text-align: center;
         }
         .kachel-title { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
         .kachel-value { font-size: 20px; font-weight: 700; }
-        .kachel-full { grid-column: span 2; margin-bottom: 24px; }
         
         .val-kommen { color: var(--col-kommen); }
         .val-pause { color: var(--col-pause); }
-        .val-ueber { color: var(--col-kommen); font-size: 24px; }
+        .val-ueber { color: var(--col-kommen); }
         .val-ueber.minus { color: var(--col-gehen); }
 
         .historie-liste { display: flex; flex-direction: column; gap: 10px; }
@@ -172,10 +172,7 @@
 
     <div class="header">
         <div class="logo-area">
-            <!-- Das Logo wird nur angezeigt, wenn die Datei logo.png auf GitHub existiert. 
-                 Fehlt sie, verschwindet der Platzhalter und der Text rutscht ganz nach links! -->
             <img src="logo.png" alt="Nähtec Logo" class="logo-img" onerror="this.style.display='none'">
-            
             <div class="logo-text-wrapper">
                 <div class="logo-nahtec">NÄHTEC</div>
                 <div class="logo-subtitle">Service Mobile</div>
@@ -241,6 +238,7 @@
         <!-- ================= SEITE 2: ÜBERSICHT & HISTORIE ================= -->
         <div class="swiper-slide">
             
+            <!-- 2x2 Kachel Grid -->
             <div class="dash-grid">
                 <div class="kachel">
                     <div class="kachel-title">Heute gearbeitet</div>
@@ -250,11 +248,15 @@
                     <div class="kachel-title">Pausenzeit</div>
                     <div class="kachel-value val-pause" id="ui-pausenzeit">00:00 Std.</div>
                 </div>
-            </div>
-
-            <div class="kachel kachel-full">
-                <div class="kachel-title">Überstunden-Konto</div>
-                <div class="kachel-value val-ueber" id="ui-ueberstunden">0.00 Std.</div>
+                <div class="kachel">
+                    <div class="kachel-title">Überstunden</div>
+                    <div class="kachel-value val-ueber" id="ui-ueberstunden">0.00 Std.</div>
+                </div>
+                <!-- Interaktive Urlaubs-Kachel -->
+                <div class="kachel" onclick="setUrlaub()" style="cursor: pointer; background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.3);">
+                    <div class="kachel-title">Resturlaub ✏️</div>
+                    <div class="kachel-value" id="ui-urlaub" style="color: var(--col-fahrt);">0 Tage</div>
+                </div>
             </div>
 
             <div class="section-title">LETZTE BUCHUNGEN</div>
@@ -298,7 +300,7 @@
         });
 
         // ==========================================
-        // KONFIGURATION
+        // KONFIGURATION & LOKALER SPEICHER
         // ==========================================
         let GH_USER = localStorage.getItem("gh_user") || "nasty007";
         let GH_REPO = localStorage.getItem("gh_repo") || "Zeiterfassung";
@@ -308,9 +310,15 @@
         let GH_NAME     = localStorage.getItem("gh_name") || "Josip Lazic";
         let GH_FUNKTION = localStorage.getItem("gh_funktion") || "Elektrotechniker";
         let UEBERSTUNDEN_START = parseFloat(localStorage.getItem("gh_ueberstunden_start") || "0.0");
+        
+        // NEU: Resturlaub speichern
+        let REST_URLAUB = localStorage.getItem("gh_urlaub") || "0";
 
         let lokalerInhalt = "";
         let letzterSha = "";
+
+        // UI direkt beim Start mit gespeicherten Werten befüllen
+        document.getElementById("ui-urlaub").innerText = REST_URLAUB + " Tage";
 
         function getMonatsDateiname() {
             const now = new Date();
@@ -343,6 +351,18 @@
             
             alert("Gespeichert! App wird neu geladen.");
             location.reload();
+        }
+
+        // ==========================================
+        // NEU: URLAUB EINTRAGEN (Wird beim Tippen auf Kachel aufgerufen)
+        // ==========================================
+        function setUrlaub() {
+            const u = prompt("Restlichen Urlaub eintragen (in Tagen):", REST_URLAUB);
+            if (u !== null) {
+                REST_URLAUB = u.trim();
+                localStorage.setItem("gh_urlaub", REST_URLAUB);
+                document.getElementById("ui-urlaub").innerText = REST_URLAUB + " Tage";
+            }
         }
 
         // ==========================================
@@ -387,7 +407,6 @@
                 const data = await response.json();
                 letzterSha = data.sha;
                 
-                // Base64 sicher decodieren (unterstützt Umlaute)
                 const binString = atob(data.content);
                 const bytes = new Uint8Array(binString.length);
                 for (let i = 0; i < binString.length; i++) {
@@ -407,7 +426,6 @@
             document.getElementById("ui-status").innerText = "Speichert...";
             const url = `https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${getMonatsDateiname()}`;
             
-            // NEU: UTF-8 sicheres Base64-Encoding (Für Umlaute & Sonderzeichen)
             const bytes = new TextEncoder().encode(neuerInhalt);
             const binString = Array.from(bytes, (byte) => String.fromCodePoint(byte)).join("");
             const b64Content = btoa(binString);
@@ -450,8 +468,18 @@
         // UI & DASHBOARD LOGIK
         // ==========================================
         function aktualisiereUI() {
+            // Zeige Urlaubswert zuverlässig an
+            document.getElementById("ui-urlaub").innerText = REST_URLAUB + " Tage";
+
             const zeilen = lokalerInhalt.split('\n').filter(z => z.length > 10 && !z.startsWith("Zeitstempel"));
-            if (zeilen.length === 0) return;
+            
+            // Fix: Wenn die Datei noch leer ist (z.B. 1. des Monats), trotzdem das Überstunden-Startguthaben anzeigen
+            if (zeilen.length === 0) {
+                const uKachel = document.getElementById("ui-ueberstunden");
+                uKachel.innerText = (UEBERSTUNDEN_START > 0 ? "+" : "") + UEBERSTUNDEN_START.toFixed(2) + " Std.";
+                if (UEBERSTUNDEN_START < 0) uKachel.classList.add("minus"); else uKachel.classList.remove("minus");
+                return;
+            }
 
             const now = new Date();
             const heuteTag = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, '0') + "-" + String(now.getDate()).padStart(2, '0');
@@ -514,7 +542,6 @@
 
             document.getElementById("historieContainer").innerHTML = htmlZeilen.join('');
 
-            // --- LÖSUNG FÜR DAS "ARBEIT ENDE = UNTERWEGS" VERHALTEN ---
             const statusEl = document.getElementById("ui-status");
             const raw = document.aktuellerStatusRaw || "";
             
