@@ -389,10 +389,17 @@
             }
         }
 
-        async function sichereDatenAufGitHub(neuerInhalt, commitMessage) {
+async function sichereDatenAufGitHub(neuerInhalt, commitMessage) {
             document.getElementById("ui-status").innerText = "Speichert...";
             const url = `https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${getMonatsDateiname()}`;
-            const b64Content = btoa(unescape(encodeURIComponent(neuerInhalt)));
+            
+            // NEU: Sicheres Base64-Encoding für alle deutschen Umlaute & Sonderzeichen
+            const bytes = new TextEncoder().encode(neuerInhalt);
+            const binString = Array.from(bytes, (byte) =>
+              String.fromCodePoint(byte)
+            ).join("");
+            const b64Content = btoa(binString);
+
             const bodyData = { message: commitMessage, content: b64Content };
             if (letzterSha) bodyData.sha = letzterSha;
 
@@ -402,13 +409,19 @@
                     headers: { "Authorization": `Bearer ${GH_TOKEN}`, "Content-Type": "application/json" },
                     body: JSON.stringify(bodyData)
                 });
-                if (!response.ok) throw new Error("Speichern fehlgeschlagen");
                 
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(`GitHub meldet: ${errData.message}`);
+                }
+                
+                // Felder nach erfolgreichem Speichern leeren
                 document.getElementById("repNummer").value = "";
                 document.getElementById("kundenEingabe").value = "";
                 ladeDatenVonGitHub();
+                
             } catch (err) {
-                alert("Fehler beim Speichern!");
+                alert(`Fehler beim Speichern!\n${err.message}`);
             }
         }
 
